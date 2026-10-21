@@ -1,33 +1,33 @@
-# Полный walkthrough развёртывания
+# Full Deployment Walkthrough
 
-## 1. Что входит в систему
+## 1. What is included
 
-Razvalisa состоит из нескольких процессов, которые запускаются в одной Docker Compose-сети:
+Razvalisa is a set of processes running in one Docker Compose network:
 
-1. `quasar-server` принимает подключения Yandex Station и предоставляет API для push-событий.
-2. `processor` принимает WebSocket-сессии от Quasar, собирает контекст и вызывает OpenAI-compatible LLM.
-3. `nlp-service` быстро разбирает типовые команды без обращения к LLM.
-4. `function-state-server` предоставляет processor состояния и функции, а их источником/транспортом служит MQTT.
-5. `quasistreaming-gigam` распознаёт входной звук по WebSocket.
-6. `alice-tts` превращает текст в OGG через Yandex UniProxy.
-7. `push-service` переносит MQTT-события в HTTP API Quasar.
-8. `speaker-identifier` хранит и сравнивает voice embeddings.
-9. `postgres` хранит зарегистрированные станции и данные Quasar.
-10. `https-proxy` является опциональным внешним TLS reverse proxy.
+1. `quasar-server` accepts Yandex Station connections and exposes the push API.
+2. `processor` accepts WebSocket sessions from Quasar, builds context, and calls an OpenAI-compatible LLM.
+3. `nlp-service` handles common commands quickly without an LLM call.
+4. `function-state-server` provides states and functions to processor through MQTT-backed providers.
+5. `quasistreaming-gigam` recognizes incoming audio over WebSocket.
+6. `alice-tts` converts text to OGG through Yandex UniProxy.
+7. `push-service` forwards MQTT events to the Quasar HTTP API.
+8. `speaker-identifier` stores and compares voice embeddings.
+9. `postgres` stores Quasar station data.
+10. `https-proxy` is an optional external TLS reverse proxy.
 
-GitHub Pages содержит только эту документацию. Docker-контейнеры должны работать на вашем сервере, VPS или локальном Docker host.
+GitHub Pages hosts documentation only. Docker containers must run on your server, VPS, or local Docker host.
 
-## 2. Требования
+## 2. Requirements
 
-- Docker Engine 24 или новее.
+- Docker Engine 24 or newer.
 - Docker Compose v2 (`docker compose version`).
 - Git.
-- Для GPU ASR: NVIDIA driver, NVIDIA Container Toolkit и совместимая CUDA-система.
-- Исходящий HTTPS-доступ для загрузки npm/pip-пакетов и моделей GigaAM/Qwen.
-- Доступный MQTT broker.
-- Доступный OpenAI-compatible LLM endpoint.
+- NVIDIA driver, NVIDIA Container Toolkit, and compatible CUDA hardware for GPU ASR.
+- Outbound HTTPS for npm/pip packages and GigaAM/Qwen model downloads.
+- An accessible MQTT broker.
+- An accessible OpenAI-compatible LLM endpoint.
 
-Проверьте установку:
+Verify the installation:
 
 ```bash
 docker --version
@@ -35,9 +35,9 @@ docker compose version
 git --version
 ```
 
-## 3. Получение исходников
+## 3. Clone the repositories
 
-Общий `docker-compose.yml` предполагает, что репозитории сервисов находятся рядом с каталогом `docs` в одном parent-каталоге:
+The shared `docker-compose.yml` assumes the service repositories are siblings of the `docs` directory:
 
 ```bash
 mkdir razvalisa && cd razvalisa
@@ -53,16 +53,16 @@ git clone https://github.com/v3rt3p/quasistreaming-gigam.git quasistreaming-giga
 git clone https://github.com/v3rt3p/speaker-identifier.git speaker-identifier
 ```
 
-Команды ниже выполняются из `razvalisa/docs`, где лежит Compose-файл.
+The remaining commands run from `razvalisa/docs`, where the Compose file is stored.
 
-## 4. Секреты и конфигурация
+## 4. Secrets and configuration
 
 ```bash
 cp .env.example .env
 chmod 600 .env
 ```
 
-Откройте `.env` и обязательно замените значения:
+Edit `.env` and replace all placeholder values:
 
 ```dotenv
 POSTGRES_PASSWORD=<long-random-password>
@@ -71,15 +71,15 @@ MQTT_URL=mqtts://<user>:<password>@<broker>:8883
 GLAGOL_JWT_KEY=<long-random-secret>
 ```
 
-Не добавляйте `.env` в Git. Не публикуйте MQTT credentials, LLM keys, `GLAGOL_JWT_KEY`, `ca.key` или enrollment profiles.
+Never commit `.env`. Do not publish MQTT credentials, LLM keys, `GLAGOL_JWT_KEY`, `ca.key`, or enrollment profiles.
 
-### State/function configuration
+### State and function configuration
 
-Перед запуском проверьте `function-state-server/config.yaml`. Пустой файл запускается, но не объявляет функций и состояний. За основу можно взять `config.example.yaml`, затем указать реальные MQTT topics и внешние HTTP endpoints.
+Review `function-state-server/config.yaml`. An empty file starts successfully but declares no functions or states. Use `config.example.yaml` as a starting point, then configure the real MQTT topics and external HTTP endpoints.
 
 ### Quasar configuration
 
-В Compose уже заданы внутренние имена Docker:
+The Compose file uses these internal Docker names:
 
 - PostgreSQL: `postgres:5432`.
 - Processor: `processor:8080`.
@@ -87,113 +87,111 @@ GLAGOL_JWT_KEY=<long-random-secret>
 - TTS: `alice-tts:9150`.
 - Quasar API: `quasar-server:31121`.
 
-Внутри контейнера нельзя использовать `localhost` для другого сервиса.
+Do not use `localhost` for one container to contact another.
 
-## 5. Первый запуск
+## 5. First startup
 
-Проверьте итоговую конфигурацию без запуска:
+Validate the rendered configuration without starting containers:
 
 ```bash
 docker compose --env-file .env config
 ```
 
-Соберите образы:
+Build the images:
 
 ```bash
 docker compose --env-file .env build
 ```
 
-Запустите систему:
+Start the stack:
 
 ```bash
 docker compose --env-file .env up -d
 ```
 
-Посмотрите состояние:
+Inspect the services:
 
 ```bash
 docker compose ps
 docker compose logs -f quasar-server processor
 ```
 
-Первый запуск ASR и speaker identifier может занять значительное время: модели загружаются из внешних источников. Их cache сохраняется в named volumes.
+The first ASR and speaker-identifier startup may take a while because models are downloaded from external sources. The model caches are stored in named volumes.
 
-## 6. Проверка после запуска
+## 6. Verify the deployment
 
-NLP имеет формальный health endpoint:
+NLP has a formal health endpoint:
 
 ```bash
 curl -fsS http://localhost:8090/health
 ```
 
-Проверка Quasar API:
+Check the Quasar API:
 
 ```bash
 curl -i http://localhost:31121/devices
 ```
 
-Проверка processor выполняется через WebSocket endpoint `/process`; отдельного HTTP `/health` у него нет. Проверяйте его логи и подключение Quasar.
+Processor is verified through its `/process` WebSocket endpoint; it has no separate HTTP `/health` endpoint. Check its logs and the Quasar connection.
 
-Проверка ASR выполняется тестовым клиентом из репозитория:
+Test ASR with the client from its repository:
 
 ```bash
 cd ../quasistreaming-gigam
 python client.py input.wav ws://localhost:8080
 ```
 
-WAV должен быть mono или stereo PCM с частотой 16 kHz. Внутри Compose ASR доступен по адресу `ws://quasistreaming-gigam:8080`, а наружу по умолчанию не публикуется.
+The WAV file must be PCM at 16 kHz. Inside Compose, ASR is available at `ws://quasistreaming-gigam:8080` and is not published to the host by default.
 
-TTS проверяется через Quasar или напрямую:
+TTS can be tested through Quasar or directly. To test it from the host, temporarily publish port `9150` using a Compose override, then run:
 
 ```bash
 curl -X POST http://localhost:9150/v1/audio/speech \
   -H 'content-type: application/json' \
-  -d '{"input":"Привет"}' \
+  -d '{"input":"Hello"}' \
   --output answer.ogg
 ```
 
-Чтобы выполнить последнюю команду с хоста, временно опубликуйте порт `9150` через override-файл либо используйте `docker compose exec`.
-
 ## 7. GPU ASR
 
-CPU — безопасный вариант по умолчанию. Для CUDA:
+CPU is the default and safest option. For CUDA:
 
-1. Установите NVIDIA Container Toolkit.
-2. Проверьте `docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi`.
-3. Соберите `quasistreaming-gigam` с `Dockerfile.cuda`.
-4. Задайте `GIGAAM_DEVICE=cuda`.
-5. Добавьте GPU reservation из upstream `quasistreaming-gigam/docker-compose.yaml`.
-6. Убедитесь в логах, что указано `device=cuda`.
+1. Install NVIDIA Container Toolkit.
+2. Verify `docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi`.
+3. Build `quasistreaming-gigam` with `Dockerfile.cuda`.
+4. Set `GIGAAM_DEVICE=cuda`.
+5. Add the GPU reservation from `quasistreaming-gigam/docker-compose.yaml`.
+6. Confirm that startup logs report `device=cuda`.
 
-Если модель переключилась на CPU, проверьте driver, toolkit, PyTorch wheel и поддерживаемую архитектуру GPU.
+If the model falls back to CPU, check the driver, toolkit, PyTorch wheel, and GPU architecture.
 
 ## 8. HTTPS proxy
 
-Proxy запускается только при необходимости:
+Start the proxy only when required:
 
 ```bash
 docker compose --env-file .env --profile proxy up -d https-proxy
 ```
 
-Порты:
+Ports:
 
 - HTTP: `80`.
 - HTTPS: `443`.
 
-Перед production замените CA-материалы в `https-proxy/certs/`. Приватный ключ нельзя публиковать в GitHub. Настройки upstream задаются через `YANDEX_UPSTREAM_URL`, `VK_UPSTREAM_URL` и `SBER_UPSTREAM_URL`.
+Replace the CA materials in `https-proxy/certs/` before production. Never publish the private key to GitHub. Configure upstreams with `YANDEX_UPSTREAM_URL`, `VK_UPSTREAM_URL`, and `SBER_UPSTREAM_URL`.
 
-## 9. Данные и backup
+## 9. Data and backups
 
-Compose создаёт volumes:
+Compose creates these volumes:
 
-- `postgres-data` — PostgreSQL.
-- `gigaam-cache` — checkpoint GigaAM.
-- `speaker-models` — cache модели Qwen.
-- `speaker-data` — enrollment profiles.
+- `postgres-data` - PostgreSQL data.
+- `gigaam-cache` - GigaAM checkpoint.
+- `speaker-models` - Qwen model cache.
+- `speaker-data` - enrollment profiles.
 
-Перед обновлением сделайте backup PostgreSQL и каталога profiles. Не выполняйте `docker compose down -v`, если данные должны сохраниться.
+Back up PostgreSQL and the profile directory before upgrades. Do not run `docker compose down -v` unless you intentionally want to delete persistent data.
 
-## 10. Обновление и остановка
+## 10. Updates and shutdown
 
 ```bash
 git -C ../alice-tts pull
@@ -203,36 +201,36 @@ docker compose --env-file .env build
 docker compose --env-file .env up -d
 ```
 
-Остановить контейнеры без удаления volumes:
+Stop containers without deleting volumes:
 
 ```bash
 docker compose down
 ```
 
-Логи конкретного сервиса:
+View logs for one service:
 
 ```bash
 docker compose logs --tail=200 -f SERVICE_NAME
 ```
 
-## 11. Типовые проблемы
+## 11. Common problems
 
-- **`function-state-server` пустой:** заполните `config.yaml`, иначе processor не увидит функции.
-- **`processor` не вызывает LLM:** проверьте `OPENAI_API_KEY`, `OPENAI_BASE_URL` и `OPENAI_MODEL`.
-- **Quasar не видит processor:** внутри Compose должен использоваться `http://processor:8080`, а не `localhost`.
-- **ASR долго стартует:** дождитесь загрузки модели и проверьте volume `gigaam-cache`.
-- **MQTT не подключается:** проверьте URL, credentials, CA certificate и сетевой доступ.
-- **PostgreSQL недоступен:** дождитесь `service_healthy`, проверьте `POSTGRES_URL` и `docker compose logs postgres`.
-- **Push-события пропадают:** `push-service` не гарантирует доставку и не имеет persistent queue; проверяйте MQTT и API logs.
+- **Empty `function-state-server`:** populate `config.yaml`, otherwise processor sees no functions.
+- **Processor cannot call the LLM:** check `OPENAI_API_KEY`, `OPENAI_BASE_URL`, and `OPENAI_MODEL`.
+- **Quasar cannot reach processor:** use `http://processor:8080` inside Compose, not `localhost`.
+- **ASR takes a long time to start:** wait for the model download and verify the `gigaam-cache` volume.
+- **MQTT connection fails:** check the URL, credentials, CA certificate, and network access.
+- **PostgreSQL is unavailable:** wait for `service_healthy` and inspect `docker compose logs postgres`.
+- **Push events are lost:** `push-service` has no guaranteed delivery or persistent queue; inspect MQTT and API logs.
 
 ## 12. Production checklist
 
-- [ ] Все секреты заменены и отсутствуют в Git.
-- [ ] MQTT broker использует ACL и TLS.
-- [ ] API ports закрыты firewall или защищены reverse proxy.
-- [ ] PostgreSQL регулярно резервируется.
-- [ ] `GLAGOL_JWT_KEY` стабилен между рестартами.
-- [ ] Модель ASR заранее прогрета.
-- [ ] Speaker verification откалибрована на target/impostor recordings.
-- [ ] Проверена стратегия миграций PostgreSQL; `synchronize: true` не оставлен без оценки.
-- [ ] Настроены restart policy, мониторинг логов и дискового пространства.
+- [ ] All secrets are replaced and absent from Git.
+- [ ] MQTT uses TLS and ACLs.
+- [ ] API ports are protected by a firewall or reverse proxy.
+- [ ] PostgreSQL is backed up regularly.
+- [ ] `GLAGOL_JWT_KEY` remains stable across restarts.
+- [ ] The ASR model is prewarmed.
+- [ ] Speaker verification is calibrated with target and impostor recordings.
+- [ ] A PostgreSQL migration strategy has been reviewed; do not blindly rely on `synchronize: true`.
+- [ ] Restart policy, log monitoring, and disk monitoring are configured.

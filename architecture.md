@@ -1,15 +1,15 @@
-# Архитектура
+# Architecture
 
-Основной поток запроса: Yandex Station подключается к `quasar-server` по WebSocket; Quasar передает запросы в `processor`; processor использует LLM, NLP и remote state/function servers. Для аудио Quasar обращается к GigaAM ASR и TTS backend. `function-state-server` работает с MQTT. `push-service` получает MQTT events и отправляет push в API Quasar.
+The main request flow is: a Yandex Station connects to `quasar-server` over WebSocket; Quasar forwards requests to `processor`; processor uses the LLM, NLP, and remote state/function servers. For audio, Quasar calls the GigaAM ASR and TTS backends. `function-state-server` integrates with MQTT, while `push-service` receives MQTT events and sends push requests to the Quasar API.
 
-## Внешние зависимости
+## External dependencies
 
-- PostgreSQL для `quasar-server`.
-- MQTT broker для state/function и push событий.
-- OpenAI-compatible LLM для `processor`.
-- Hugging Face для первой загрузки GigaAM и Qwen speaker model.
-- NVIDIA runtime только для CUDA ASR.
+- PostgreSQL for `quasar-server`.
+- An MQTT broker for state/function and push events.
+- An OpenAI-compatible LLM for `processor`.
+- Hugging Face for the first GigaAM and Qwen model downloads.
+- NVIDIA runtime only for CUDA ASR.
 
-## Сетевые имена Compose
+## Compose service names
 
-Внутри сети Docker используются `postgres`, `processor`, `function-state-server`, `nlp-service`, `quasistreaming-gigam`, `alice-tts` и `quasar-server`. Не используйте `localhost` для обращения одного контейнера к другому.
+The Docker network uses `postgres`, `processor`, `function-state-server`, `nlp-service`, `quasistreaming-gigam`, `alice-tts`, and `quasar-server`. Do not use `localhost` for one container to reach another.

@@ -5,37 +5,37 @@ title: Razvalisa Documentation
 
 # Razvalisa
 
-Документация по развертыванию набора сервисов голосового ассистента.
+Documentation for deploying and operating the Razvalisa voice assistant stack.
 
-## Развертывание
+## Deployment
 
-1. Установите Docker Engine и Docker Compose v2.
-2. Скопируйте `.env.example` в `.env` в корне репозитория.
-3. Заполните `OPENAI_API_KEY`, `MQTT_URL`, `POSTGRES_PASSWORD` и `GLAGOL_JWT_KEY`.
-4. Выполните `docker compose build && docker compose up -d`.
-5. Проверьте `GET http://localhost:8090/health` и `GET http://localhost:31121/devices`.
+1. Install Docker Engine and Docker Compose v2.
+2. Copy `.env.example` to `.env`.
+3. Set `OPENAI_API_KEY`, `MQTT_URL`, `POSTGRES_PASSWORD`, and `GLAGOL_JWT_KEY`.
+4. Run `docker compose build && docker compose up -d`.
+5. Check `GET http://localhost:8090/health` and `GET http://localhost:31121/devices`.
 
-Полная архитектура описана в [архитектуре](architecture.md), а команды эксплуатации — в [операционном руководстве](operations.md). Compose-файл находится в корне репозитория и запускается с локального сервера.
+The complete setup is documented in the [deployment walkthrough](deployment.md). The Compose file and `.env` template are stored in this repository as `docker-compose.yml` and `.env.example`.
 
-## Навигация
+## Navigation
 
-- [Полный walkthrough](deployment.md)
-- [Архитектура](architecture.md)
-- [Эксплуатация](operations.md)
-- [Сервисы](services.md)
+- [Full deployment walkthrough](deployment.md)
+- [Architecture](architecture.md)
+- [Operations](operations.md)
+- [Services](services.md)
 
-## Компоненты
+## Components
 
-- [alice-tts](services/alice-tts.md) — синтез речи.
-- [function-state-server](services/function-state-server.md) — состояния и функции через MQTT.
-- [https-proxy](services/https-proxy.md) — TLS reverse proxy.
-- [nlp-service](services/nlp-service.md) — детерминированный parser.
-- [processor](services/processor.md) — LLM processor.
-- [push-service](services/push-service.md) — MQTT push bridge.
-- [quasar-server](services/quasar-server.md) — Quasar backend.
-- [quasistreaming-gigam](services/quasistreaming-gigam.md) — ASR.
-- [speaker-identifier](services/speaker-identifier.md) — speaker embeddings.
+- [alice-tts](services/alice-tts.md) - speech synthesis.
+- [function-state-server](services/function-state-server.md) - MQTT-backed states and functions.
+- [https-proxy](services/https-proxy.md) - TLS reverse proxy.
+- [nlp-service](services/nlp-service.md) - deterministic parser.
+- [processor](services/processor.md) - LLM processor.
+- [push-service](services/push-service.md) - MQTT push bridge.
+- [quasar-server](services/quasar-server.md) - Quasar API.
+- [quasistreaming-gigam](services/quasistreaming-gigam.md) - streaming ASR.
+- [speaker-identifier](services/speaker-identifier.md) - speaker embeddings.
 
-## Важно
+## Important
 
-GitHub Pages предназначен только для документации. Сервисы, Docker Compose, секреты и модели запускаются на вашем сервере, а не внутри GitHub Pages.
+GitHub Pages hosts documentation only. Docker services, secrets, databases, and model workloads must run on your own server or Docker host.

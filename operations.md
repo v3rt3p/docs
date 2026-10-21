@@ -1,6 +1,6 @@
-# Эксплуатация
+# Operations
 
-## Проверка состояния
+## Health checks
 
 ```bash
 docker compose ps
@@ -10,9 +10,9 @@ curl http://localhost:8090/health
 curl http://localhost:31121/devices
 ```
 
-У сервисов без health endpoint проверяйте логи, TCP listener и рабочий API. `push-service` не имеет HTTP listener; его состояние проверяется по MQTT connection logs.
+For services without a health endpoint, check logs, TCP listeners, and functional APIs. `push-service` has no HTTP listener; monitor its MQTT connection logs.
 
-## Обновление
+## Updates
 
 ```bash
 git pull
@@ -20,18 +20,17 @@ docker compose build
 docker compose up -d
 ```
 
-Volumes не удаляйте без резервной копии. Для базы сделайте `pg_dump`; для speaker profiles сохраните volume `speaker-data`.
+Do not remove volumes without a backup. Use `pg_dump` for PostgreSQL and back up the `speaker-data` volume for enrollment profiles.
 
-## Логи и диагностика
+## Logs and diagnostics
 
 ```bash
-docker compose logs -f SERVICE
-
+docker compose logs -f SERVICE_NAME
 docker compose config
 ```
 
-Первый запуск ASR и speaker identifier может быть долгим: модели скачиваются из внешних registry. Убедитесь, что контейнерам разрешен исходящий HTTPS.
+The first ASR and speaker-identifier startup can be slow because models are downloaded from external registries. Ensure outbound HTTPS is allowed.
 
-## Безопасность
+## Security
 
-Задайте уникальные секреты, не публикуйте `31121` и `9010` без авторизации, замените приватный CA в `https-proxy`, ограничьте MQTT ACL и не размещайте `.env` в GitHub Pages.
+Use unique secrets, do not expose `31121` or `9010` without authentication, replace the private CA in `https-proxy`, restrict MQTT ACLs, and never place `.env` in GitHub Pages.

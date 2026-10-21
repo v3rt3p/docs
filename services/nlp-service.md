@@ -1,6 +1,6 @@
 # nlp-service
 
-Детерминированный parser запросов ассистента. MQTT не использует.
+Deterministic natural-language parser for common assistant requests. It does not use MQTT.
 
 ## Docker Compose
 
@@ -8,16 +8,16 @@
 docker compose build nlp-service
 docker compose up -d nlp-service
 curl http://localhost:8090/health
-curl -X POST http://localhost:8090/parse -H 'content-type: application/json' -d '{"text":"включи свет","functions":{}}'
+curl -X POST http://localhost:8090/parse -H 'content-type: application/json' -d '{"text":"turn on the light","functions":{}}'
 ```
 
 Standalone: `docker build -t nlp-service . && docker run --rm -p 8090:8090 -e PORT=8090 nlp-service`.
 
-## Переменные и API
+## Environment and API
 
 - `PORT` (default `8090`)
 - `TIMEZONE` (default `Europe/Moscow`)
-- `GET /health` -> `{ "status": "ok" }`
-- `POST /parse` принимает `{ "text": string, "functions": object }`; лимит JSON body — 64 KiB.
+- `GET /health` returns `{ "status": "ok" }`.
+- `POST /parse` accepts `{ "text": string, "functions": object }`; JSON body limit is 64 KiB.
 
-Проверка перед деплоем: `pnpm test && pnpm typecheck`.
+Run `pnpm test && pnpm typecheck` before deployment.
