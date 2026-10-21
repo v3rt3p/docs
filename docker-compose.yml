@@ -1,0 +1,150 @@
+name: razvalisa
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-quasar}
+      POSTGRES_USER: ${POSTGRES_USER:-quasar}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  nlp-service:
+    build: ./nlp-service
+    restart: unless-stopped
+    environment:
+      PORT: 8090
+      TIMEZONE: ${TIMEZONE:-Europe/Moscow}
+    expose: ["8090"]
+
+  function-state-server:
+    build: ./function-state-server
+    restart: unless-stopped
+    environment:
+      PORT: 8080
+      CONFIG_PATH: /app/config.yaml
+      MQTT_URL: ${MQTT_URL:?Set MQTT_URL in .env}
+      MQTT_CA_CERTIFICATE_PATH: /app/ca-cert.pem
+    volumes:
+      - ./function-state-server/config.yaml:/app/config.yaml:ro
+      - ./function-state-server/ca-cert.pem:/app/ca-cert.pem:ro
+    expose: ["8080"]
+
+  processor:
+    build: ./processor
+    restart: unless-stopped
+    environment:
+      PORT: 8080
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?Set OPENAI_API_KEY in .env}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://llm.bksp.in}
+      OPENAI_MODEL: ${OPENAI_MODEL:-Qwen2.5-32B-Instruct}
+      PROCESSOR_FUNCTION_SERVER_URLS: http://function-state-server:8080
+      PROCESSOR_STATE_SERVER_URLS: http://function-state-server:8080
+      NLP_SERVICE_URL: http://nlp-service:8090
+      PROMPT_TEMPLATE_PATH: /app/prompt.handlebars
+      STATE_PROMPT_TEMPLATE_PATH: /app/prompt-state.handlebars
+    depends_on:
+      function-state-server:
+        condition: service_started
+      nlp-service:
+        condition: service_started
+    expose: ["8080"]
+
+  quasistreaming-gigam:
+    build:
+      context: ./quasistreaming-gigam
+      dockerfile: ${ASR_DOCKERFILE:-Dockerfile.cpu}
+    restart: unless-stopped
+    environment:
+      PORT: 8080
+      GIGAAM_DEVICE: ${GIGAAM_DEVICE:-cpu}
+      GIGAAM_DOWNLOAD_ROOT: /app/.cache/gigaam
+    volumes:
+      - gigaam-cache:/app/.cache/gigaam
+    expose: ["8080"]
+
+  alice-tts:
+    build: ./alice-tts
+    restart: unless-stopped
+    environment:
+      PORT: 9150
+      UNIWS_URL: ${UNIWS_URL:-wss://uniproxy.alice.yandex.net/uni.ws}
+    expose: ["9150"]
+
+  quasar-server:
+    build: ./quasar-server
+    restart: unless-stopped
+    environment:
+      PORT: 31120
+      API_PORT: 31121
+      POSTGRES_URL: postgres://${POSTGRES_USER:-quasar}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-quasar}
+      PROCESSOR_BASIC_URL: http://processor:8080
+      STT_GIGAAM_URL: ws://quasistreaming-gigam:8080
+      TTS_OPENAI_BASE_URL: ${TTS_OPENAI_BASE_URL:-http://alice-tts:9150}
+      TTS_OPENAI_API_KEY: ${TTS_OPENAI_API_KEY:-}
+      TTS_OPENAI_MODEL: ${TTS_OPENAI_MODEL:-}
+      TTS_OPENAI_VOICE: ${TTS_OPENAI_VOICE:-IVONA 2 Tatyana OEM}
+      GLAGOL_JWT_KEY: ${GLAGOL_JWT_KEY:?Set GLAGOL_JWT_KEY in .env}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      processor:
+        condition: service_started
+      quasistreaming-gigam:
+        condition: service_started
+    ports:
+      - "${QUASAR_PORT:-31120}:31120"
+      - "${QUASAR_API_PORT:-31121}:31121"
+
+  push-service:
+    build: ./push-service
+    restart: unless-stopped
+    environment:
+      API_URLS: http://quasar-server:31121
+      MQTT_URL: ${MQTT_URL:?Set MQTT_URL in .env}
+      MQTT_CA_CERTIFICATE_PATH: /app/ca-cert.pem
+      MQTT_TOPIC_PREFIX: ${MQTT_TOPIC_PREFIX:-bus/services/alice}
+    volumes:
+      - ./push-service/ca-cert.pem:/app/ca-cert.pem:ro
+    depends_on:
+      quasar-server:
+        condition: service_started
+
+  speaker-identifier:
+    build: ./speaker-identifier
+    restart: unless-stopped
+    environment:
+      PORT: 9010
+      QWEN3_ASR_ENROLLMENT_STORE: /app/data/qwen3_asr_enrollments.json
+      QWEN3_ASR_EMBEDDER_CACHE: /app/pretrained_models
+    volumes:
+      - speaker-data:/app/data
+      - speaker-models:/app/pretrained_models
+    ports:
+      - "${SPEAKER_PORT:-9010}:9010"
+
+  https-proxy:
+    build: ./https-proxy
+    restart: unless-stopped
+    environment:
+      YANDEX_UPSTREAM_URL: http://quasar-server:31120
+    depends_on:
+      quasar-server:
+        condition: service_started
+    profiles: ["proxy"]
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+
+volumes:
+  postgres-data:
+  gigaam-cache:
+  speaker-data:
+  speaker-models:
