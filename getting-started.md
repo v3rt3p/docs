@@ -106,7 +106,7 @@ services:
       - ./prompt.handlebars:/prompt.handlebars
       - ./prompt-state.handlebars:/prompt-state.handlebars
 ```      
-5. Перенастроить DNS для всех доменов касающихся Яндекса на хост где этот `docker-compose.yml` будет запущен, на данный момент этот список [такой](https://github.com/v3rt3p/https-proxy/blob/master/domains/yandex.txt) (кроме первой строки, домены которые начинаются с `!` тоже надо добавить как regexp - любой поддомен должен резолвится в хост)
+5. Перенастроить DNS для всех доменов касающихся Яндекса на хост где этот `docker-compose.yml` будет запущен, на данный момент этот список [такой](https://github.com/v3rt3p/https-proxy/blob/master/domains/yandex.txt) (первую строку игнорируем, дальше идут домены, при этом домены которые начинаются с `!` тоже надо добавить как regexp - любой поддомен должен резолвится в наш хост)
 6. Запустить `docker-compose.yml`: `docker compose up -d --build`
 7. Запустить просмотр логов - может быть полезно: `docker compose logs -f https-proxy`
 8. На этом этапе начинается самое интересное - запуск Яндекс.Станции - в идеале в "сброшенном" состоянии - зажав кнопку "Mute" на ней при включении
