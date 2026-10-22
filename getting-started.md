@@ -83,7 +83,7 @@ services:
     volumes:
       - ./quasistreaming-models/:/models/:ro
   supertonic-tts:
-    build: https://github.com/v3rt3p/supertonic-tts.git#feat/implementation
+    build: https://github.com/v3rt3p/supertonic-tts.git
     restart: always
     environment:
       ASSETS_PATH: /assets
