@@ -123,9 +123,9 @@ services:
       OPENAI_MODEL: nvidia/nemotron-3.5-lightning:free # Replace this with your target model name
       PROCESSOR_FUNCTION_SERVER_URLS: http://quasar-server:31114/functions
       PROCESSOR_STATE_SERVER_URLS: http://quasar-server:31114/state
-      PROCESSOR_PROMPT_TEMPLATE_PATH: /prompt.handlebars
-      PROCESSOR_STATE_PROMPT_TEMPLATE_PATH: /prompt-state.handlebars
-      PROCESSOR_FUNCTIONS_PROMPT_TEMPLATE_PATH: /prompt-functions.handlebars
+      PROMPT_TEMPLATE_PATH: /prompt.handlebars
+      STATE_PROMPT_TEMPLATE_PATH: /prompt-state.handlebars
+      FUNCTIONS_PROMPT_TEMPLATE_PATH: /prompt-functions.handlebars
       TZ: Europe/Moscow # Default timezone for new smart speakers, but you may change through API it after speaker is connected
       CACHE_SIZE: 1000
     volumes:

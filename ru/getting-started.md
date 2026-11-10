@@ -125,9 +125,9 @@ services:
       OPENAI_MODEL: nvidia/nemotron-3.5-lightning:free # Замените на имя нужной модели
       PROCESSOR_FUNCTION_SERVER_URLS: http://quasar-server:31114/functions
       PROCESSOR_STATE_SERVER_URLS: http://quasar-server:31114/state
-      PROCESSOR_PROMPT_TEMPLATE_PATH: /prompt.handlebars
-      PROCESSOR_STATE_PROMPT_TEMPLATE_PATH: /prompt-state.handlebars
-      PROCESSOR_FUNCTIONS_PROMPT_TEMPLATE_PATH: /prompt-functions.handlebars
+      PROMPT_TEMPLATE_PATH: /prompt.handlebars
+      STATE_PROMPT_TEMPLATE_PATH: /prompt-state.handlebars
+      FUNCTIONS_PROMPT_TEMPLATE_PATH: /prompt-functions.handlebars
       TZ: Europe/Moscow # Часовой пояс по умолчанию для новых станций; после подключения его можно изменить через API
       CACHE_SIZE: 1000
     volumes:

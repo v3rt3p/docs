@@ -20,7 +20,9 @@ Source: [`v3rt3p/processor`](https://github.com/v3rt3p/processor), current `mast
 | `NLP_SERVICE_URL` | No | - | Optional NLP shortcut service. |
 | `NLP_SERVICE_TIMEOUT_MS` | No | `500` | NLP request timeout. |
 | `CACHE_SIZE` | No | `1000` | In-memory session/cache size. |
-| `SENTRY_DSN` | No | - | Optional error reporting. |
+| `STATE_FUNCTIONS_MESSAGES_TYPE` | No | `tool` | Role used for state and function updates added to the LLM conversation. `tool` keeps them as tool messages; `system` sends them as system messages instead. |
+| `ERROR_RESPONSE_TEXT` | No | `Произошла ошибка при обработке, попробуйте позже` | Text sent to the device when processing fails (for example, when the LLM call throws). The processor returns it as a `partialResponse` and closes the WebSocket. |
+| `SENTRY_DSN` | No | `https://test@o0.ingest.sentry.io/0` | Error reporting. The built-in default is a Sentry test DSN that does not deliver your events, so set your own DSN to collect errors. |
 
 `TZ` may be set in a container environment, but it is not one of the processor's core configuration values.
 
